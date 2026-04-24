@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Ethical Hacking Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
+            padding: 2rem;
+        }
+        h1 {
+            color: #00ff41;
+            margin-bottom: 2rem;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #111;
+            border: 1px solid #00ff41;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        th, td {
+            border: 1px solid #00ff41;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        th {
+            background: #001a00;
+        }
+        .refresh-btn {
+            background: #00ff41;
+            color: black;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Admin Dashboard - Ethical Hacking Course</h1>
+    
+    <div class="stats" id="stats"></div>
+    
+    <button class="refresh-btn" onclick="loadData()">🔄 Refresh</button>
+    
+    <h2>📋 Registrations</h2>
+    <div style="overflow-x: auto;">
+        <table id="registrationsTable">
+            <thead>
+                <tr><th>ID</th><th>Name</th><th>Email</th><th>Course</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    
+    <h2 style="margin-top: 2rem;">📥 Recent Downloads</h2>
+    <div style="overflow-x: auto;">
+        <table id="downloadsTable">
+            <thead><tr><th>Email</th><th>Resource</th><th>Date</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        
+        async function loadData() {
+            await loadStats();
+            await loadRegistrations();
+            await loadDownloads();
+        }
+        
+        async function loadStats() {
+            const response = await fetch(`${API_URL}/admin/stats`);
+            const stats = await response.json();
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card"><div class="stat-number">${stats.total || 0}</div><div>Total Registrations</div></div>
+                <div class="stat-card"><div class="stat-number">${stats.paid || 0}</div><div>Paid</div></div>
+                <div class="stat-card"><div class="stat-number">${stats.pending || 0}</div><div>Pending</div></div>
+                <div class="stat-card"><div class="stat-number">${stats.total_downloads || 0}</div><div>Total Downloads</div></div>
+            `;
+        }
+        
+        async function loadRegistrations() {
+            const response = await fetch(`${API_URL}/admin/registrations`);
+            const registrations = await response.json();
+            const tbody = document.querySelector('#registrationsTable tbody');
+            tbody.innerHTML = registrations.map(r => `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.name}</td>
+                    <td>${r.email}</td>
+                    <td>${r.course}</td>
+                    <td style="color: ${r.status === 'paid' ? '#00ff41' : '#ffaa00'}">${r.status}</td>
+                    <td>${new Date(r.registered_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+        
+        async function loadDownloads() {
+            const response = await fetch(`${API_URL}/admin/downloads`);
+            const downloads = await response.json();
+            const tbody = document.querySelector('#downloadsTable tbody');
+            tbody.innerHTML = downloads.map(d => `
+                <tr>
+                    <td>${d.email}</td>
+                    <td>${d.resource_name}</td>
+                    <td>${new Date(d.downloaded_at).toLocaleString()}</td>
+                </tr>
+            `).join('');
+        }
+        
+        loadData();
+        setInterval(loadData, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

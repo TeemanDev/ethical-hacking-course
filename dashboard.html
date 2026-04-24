@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Ethical Hacking Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #00ff41;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: #001a00;
+            border: 1px solid #00ff41;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .section {
+            background: #001a00;
+            border: 1px solid #00ff41;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .section h2 {
+            margin-bottom: 1rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #00ff41;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        .btn {
+            background: #00ff41;
+            color: #000;
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            display: inline-block;
+            margin: 0.5rem;
+        }
+        .logout-btn {
+            background: #ff4444;
+            color: white;
+        }
+        .status-paid {
+            color: #00ff41;
+        }
+        .status-pending {
+            color: #ffaa00;
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            table { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🎓 Student Dashboard</h1>
+                <p id="userWelcome"></p>
+            </div>
+            <div>
+                <a href="/" class="btn">🏠 Home</a>
+                <button onclick="logout()" class="btn logout-btn">🚪 Logout</button>
+            </div>
+        </header>
+
+        <div class="stats-grid" id="statsGrid"></div>
+
+        <div class="section">
+            <h2>📋 Your Registration</h2>
+            <div id="registrationInfo"></div>
+        </div>
+
+        <div class="section">
+            <h2>💰 Payment History</h2>
+            <div id="paymentsTable"></div>
+        </div>
+
+        <div class="section">
+            <h2>📥 Your Downloads</h2>
+            <div id="downloadsTable"></div>
+        </div>
+
+        <div class="section">
+            <h2>📚 Free Resources</h2>
+            <div id="resourcesList"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return false;
+            }
+            return true;
+        }
+        
+        async function loadDashboard() {
+            if (!checkAuth()) return;
+            
+            const email = localStorage.getItem('userEmail');
+            const userName = localStorage.getItem('userName');
+            
+            document.getElementById('userWelcome').innerHTML = `Welcome back, <strong>${userName || email}</strong>!`;
+            
+            try {
+                const response = await fetch(`${API_URL}/dashboard/${email}`);
+                const data = await response.json();
+                
+                // Stats
+                const statsHtml = `
+                    <div class="stat-card"><div class="stat-number">${data.payments?.filter(p => p.status === 'completed').length || 0}</div><div>Courses Paid</div></div>
+                    <div class="stat-card"><div class="stat-number">${data.downloads?.length || 0}</div><div>Resources Downloaded</div></div>
+                    <div class="stat-card"><div class="stat-number">${data.registration?.status === 'paid' ? '✅' : '⏳'}</div><div>Payment Status</div></div>
+                `;
+                document.getElementById('statsGrid').innerHTML = statsHtml;
+                
+                // Registration info
+                if (data.registration) {
+                    document.getElementById('registrationInfo').innerHTML = `
+                        <p><strong>Course:</strong> ${data.registration.course}</p>
+                        <p><strong>Status:</strong> <span class="status-${data.registration.status}">${data.registration.status.toUpperCase()}</span></p>
+                        <p><strong>Registered:</strong> ${new Date(data.registration.registered_at).toLocaleString()}</p>
+                        ${data.registration.status !== 'paid' ? '<p><a href="/" class="btn">Make Payment →</a></p>' : ''}
+                    `;
+                } else {
+                    document.getElementById('registrationInfo').innerHTML = '<p>No registration found. <a href="/">Register here →</a></p>';
+                }
+                
+                // Payments table
+                if (data.payments && data.payments.length > 0) {
+                    document.getElementById('paymentsTable').innerHTML = `
+                        <table>
+                            <tr><th>Course</th><th>Amount</th><th>Crypto</th><th>Status</th><th>Date</th></tr>
+                            ${data.payments.map(p => `
+                                <tr>
+                                    <td>${p.course_name}</td>
+                                    <td>$${p.amount}</td>
+                                    <td>${p.crypto_type}</td>
+                                    <td class="status-${p.status}">${p.status}</td>
+                                    <td>${new Date(p.paid_at).toLocaleDateString()}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    document.getElementById('paymentsTable').innerHTML = '<p>No payments yet.</p>';
+                }
+                
+                // Downloads table
+                if (data.downloads && data.downloads.length > 0) {
+                    document.getElementById('downloadsTable').innerHTML = `
+                        <table>
+                            <tr><th>Resource</th><th>Downloaded At</th></tr>
+                            ${data.downloads.map(d => `
+                                <tr>
+                                    <td>${d.resource_name}</td>
+                                    <td>${new Date(d.downloaded_at).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                } else {
+                    document.getElementById('downloadsTable').innerHTML = '<p>No downloads yet.</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                document.getElementById('registrationInfo').innerHTML = '<p class="error">Error loading data. Make sure server is running.</p>';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userName');
+            window.location.href = '/';
+        }
+        
+        // Resources list
+        const resources = [
+            { name: "Nmap Cheat Sheet", icon: "📖" },
+            { name: "Python for Hackers", icon: "🐍" },
+            { name: "Kali Linux Tools Guide", icon: "🔧" },
+            { name: "Pentesting Checklist", icon: "📝" },
+            { name: "Metasploit Workbook", icon: "💻" },
+            { name: "OWASP Top 10 Guide", icon: "🌐" }
+        ];
+        
+        document.getElementById('resourcesList').innerHTML = resources.map(r => `
+            <button onclick="downloadResource('${r.name}')" style="background: #001a00; border: 1px solid #00ff41; color: #00ff41; padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer;">
+                ${r.icon} ${r.name}
+            </button>
+        `).join('');
+        
+        async function downloadResource(resourceName) {
+            const email = localStorage.getItem('userEmail');
+            
+            try {
+                await fetch(`${API_URL}/track-download`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, resourceName })
+                });
+            } catch (error) {
+                console.log('Tracking failed');
+            }
+            
+            // PDF generation functions (same as before)
+            function downloadPDF(content, filename) {
+                const blob = new Blob([content], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+            
+            // Generate content based on resource name
+            let content = '';
+            if (resourceName === 'Nmap Cheat Sheet') content = 'Nmap Cheat Sheet Content...';
+            else if (resourceName === 'Python for Hackers') content = 'Python Scripts...';
+            else content = `${resourceName} Content`;
+            
+            downloadPDF(content, `${resourceName}.pdf`);
+            alert(`✅ ${resourceName} downloaded!`);
+        }
+        
+        loadDashboard();
+    </script>
+</body>
+</html>

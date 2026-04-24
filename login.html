@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Ethical Hacking Course</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            background: #001a00;
+            border: 2px solid #00ff41;
+            padding: 3rem;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            margin: 0.5rem 0 1rem;
+            background: #0a0a0a;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            font-family: monospace;
+        }
+        button {
+            width: 100%;
+            padding: 0.8rem;
+            background: #00ff41;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+        .error {
+            color: #ff4444;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .success {
+            color: #00ff41;
+            margin: 1rem 0;
+            text-align: center;
+        }
+        .link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .link a {
+            color: #00ff41;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🔐 Login</h1>
+        <div id="message"></div>
+        <input type="email" id="email" placeholder="Email" autocomplete="email">
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+        <button onclick="login()">Login →</button>
+        <div class="link">
+            <a href="/">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin + '/api';
+        
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('message');
+            
+            if (!email || !password) {
+                messageDiv.innerHTML = '<div class="error">Please enter email and password</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('userEmail', email);
+                    localStorage.setItem('userName', data.user.name);
+                    messageDiv.innerHTML = '<div class="success">Login successful! Redirecting...</div>';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    messageDiv.innerHTML = `<div class="error">${data.error}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">Connection error. Make sure server is running.</div>';
+            }
+        }
+        
+        // Check if already logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+            window.location.href = '/dashboard';
+        }
+        
+        // Enter key submits
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    </script>
+</body>
+</html>

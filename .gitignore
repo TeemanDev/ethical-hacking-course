@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+npm-debug.log
+
+# Database
+course.db
+test.db
+*.db
+
+# Environment variables (IMPORTANT - contains passwords!)
+.env
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# PM2
+.pm2/
